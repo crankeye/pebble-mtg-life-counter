@@ -1,9 +1,8 @@
-MTG Life Counter
+Pebble MTG Life Counter
 ===================
 A Magic:The Gathering life counter for the Pebble smart watch (SDK 2.0 BETA6). Tracks two players life totals and provides the last two life total changes for each player.
 
 ![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/usage.png) 
-
 How to Use
 ----------
 **Up**: Me +/- 1
