@@ -2,17 +2,27 @@ MTG Life Counter
 ===================
 A Magic:The Gathering life counter for the Pebble smart watch (SDK 2.0 BETA6). Tracks two players life totals and provides the last two life total changes for each player.
 
-![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/start.png) ![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/usage.png) ![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/reset.png)
+**FRESH**
+![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/start.png) 
+
+**MID GAME**
+![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/usage.png) 
+
+**RESET DIALOG**
+![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/reset.png)
 
 How to Use
 ----------
 **Up**: Me +/- 1
+
 **Up Long**: Me +/- 5
 
 **Select**: Toggle +/-
+
 **Select Long**: Reset
 
 **Down**: You +/- 1
+
 **Down Long**: You +/- 5
 
 How to Build
