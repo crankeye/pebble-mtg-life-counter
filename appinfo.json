@@ -1,0 +1,17 @@
+{
+  "uuid": "24ed8231-15bc-4104-a7d6-4bf4cf1848ea",
+  "shortName": "MTG Life Counter",
+  "longName": "MTG Life Counter",
+  "companyName": "crankeye",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
