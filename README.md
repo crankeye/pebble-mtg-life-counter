@@ -24,6 +24,11 @@ How to Build
 `$ cd /path/to/pebble-mtg-life-counter/
 $ pebble build && pebble install --phone XXX.XXX.XXX.XXX`
 
+Donate
+------
+**Bitcoin**: `1Exq7Tf6djX5Mkn1APnExbFoAV2n5h2p7A`  
+**Litecoin**: `LggR9F33ZYhEp2KXmC43rpVmBZZXNfAN3C`
+
 License
 -------
 This project is licensed under the MIT license. Please see the LICENSE file for more details.
