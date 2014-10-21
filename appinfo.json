@@ -9,12 +9,19 @@
     "longName": "MTG Life Counter",
     "projectType": "native",
     "resources": {
-        "media": []
+        "media": [
+            {
+                "file": "images/mtg-life-counter-icon.png",
+                "menuIcon": true,
+                "name": "mtg_life_counter_icon",
+                "type": "png"
+            }
+        ]
     },
-    "shortName": "MTG Life Counter",
+    "shortName": "Life Counter",
     "uuid": "24ed8231-15bc-4104-a7d6-4bf4cf1848ea",
     "versionCode": 1,
-    "versionLabel": "2",
+    "versionLabel": "1.1",
     "watchapp": {
         "watchface": false
     }
