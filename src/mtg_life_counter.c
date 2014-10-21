@@ -7,10 +7,12 @@
 #define HISTORY_2_PLAYER_1_PKEY  14
 #define HISTORY_1_PLAYER_2_PKEY  17
 #define HISTORY_2_PLAYER_2_PKEY  18
+#define ROUND_START_TIME_PKEY    19
 
 #define PLAYER_LIFE_1_DEFAULT 20
 #define PLAYER_LIFE_2_DEFAULT 20
 #define DIRECTION_DEFAULT     -1
+#define ROUND_START_TIME_DEFAULT 0
 
 static Window *window;
 static TextLayer *life_total_1;
@@ -25,6 +27,7 @@ static TextLayer *you_change_layer;
 static InverterLayer *history_layer;
 static TextLayer *history_player_1;
 static TextLayer *history_player_2;
+static TextLayer *round_time_layer;
 static AppTimer *timer;
 
 static int player_life_1 = 20;
@@ -33,7 +36,9 @@ static int player_life_2 = 20;
 static int player_life_2_change = 0;
 static int repeating_click_interval = 300;
 static int reset_life_total_click_interval = 600;
+static int history_save_interval = 2000;
 static int direction = DIRECTION_DEFAULT;
+static int round_start_time = 0;
 
 static char history_1_player_1[18];
 static char history_2_player_1[18];
@@ -41,6 +46,40 @@ static char history_1_player_2[18];
 static char history_2_player_2[18];
 
 static bool reset_prompt = false;
+static bool round_prompt = false;
+
+static int set_round_start_time()
+{
+  return round_start_time = (int)time(NULL);
+}
+
+static void draw_round_time()
+{
+  int round_time = (int)time(NULL) - round_start_time;
+  
+  int hours   = 0;
+  int minutes = 0;
+  int seconds = 0;
+  
+  if (round_time > 0) {
+    hours   = round_time / (60 * 60);
+    minutes = (round_time / 60) % 60;
+    seconds = round_time % 60;
+  }
+  
+  if (hours >= 99) {
+    set_round_start_time();
+  }
+  
+  static char round_time_char[25];
+  snprintf(round_time_char, 19, "%s%02d:%02d:%02d", "ROUND ", hours, minutes, seconds);
+  text_layer_set_text(round_time_layer, round_time_char);
+}
+
+static void draw_round_time_callback(struct tm *tick_time, TimeUnits units_changed)
+{
+  draw_round_time();
+}
 
 static void draw_history()
 {
@@ -82,7 +121,7 @@ static void history_timer_callback(void *data)
 
 static void start_history_timer()
 {
-  timer = app_timer_register(1000, history_timer_callback, NULL);
+  timer = app_timer_register(history_save_interval, history_timer_callback, NULL);
 }
 
 static void cancel_history_timer()
@@ -92,22 +131,18 @@ static void cancel_history_timer()
 
 static void draw_direction()
 {
-  if (direction > 0){
-    text_layer_set_text(direction_layer, "+"); 
-  } else {
-    text_layer_set_text(direction_layer, "-");
+  if (reset_prompt == false) {
+    if (direction > 0){
+      text_layer_set_text(direction_layer, "+"); 
+    } else {
+      text_layer_set_text(direction_layer, "-");
+    }
   }
 }
 
 static void change_direction()
 {
   direction = direction * -1;
-  draw_direction();
-}
-
-static void set_direction(int new_direction)
-{
-  direction = new_direction;
   draw_direction();
 }
 
@@ -126,6 +161,7 @@ static int change_life_total(int life_total, int change)
 {
   cancel_history_timer();
   start_history_timer();
+  
   life_total = life_total + (change * direction);
   
   if (life_total < 0){
@@ -156,50 +192,82 @@ static void reset_life_totals()
   draw_history();
 }
 
-static void show_reset_prompt()
+static void show_change_layers()
 {
-  //HIDE CHANGE LAYERS
-  text_layer_set_size (me_change_layer, (GSize) { 0 , 0  } );
-  text_layer_set_size (you_change_layer, (GSize) { 0 , 0  } );
-
-  //HIDE HISTORY LAYERS
-  text_layer_set_size (history_player_1, (GSize) { 0 , 0  } );
-  text_layer_set_size (history_player_2, (GSize) { 0 , 0  } );
-  
-  //SHOW CONFIRM/REJECT
-  text_layer_set_size (confirm_accept_layer, (GSize) { 72 , 28 } );
-  text_layer_set_size (confirm_reject_layer, (GSize) { 72 , 28 } );
-
-  //CHANGE RESET TEXT
-  text_layer_set_font(direction_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text(direction_layer, "Reset?");
-
-  reset_prompt = true;
-}
-
-static void hide_reset_prompt()
-{
-  //HIDE CONFIRM/REJECT
-  text_layer_set_size (confirm_accept_layer, (GSize) { 0 , 0  } );
-  text_layer_set_size (confirm_reject_layer, (GSize) { 0 , 0  } );
-
-  //SHOW HISTORY LAYERS
-  text_layer_set_size (history_player_1, (GSize) { 72 , 36  } );
-  text_layer_set_size (history_player_2, (GSize) { 72 , 36  } );
-
-  //SHOW CHANGE LAYERS
   text_layer_set_size (me_change_layer, (GSize) { 72 , 28  } );
   text_layer_set_size (you_change_layer, (GSize) { 72 , 28  } );
+}
 
-  //RESET RESET TEXT
-  text_layer_set_font(direction_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
+static void hide_change_layers()
+{
+  text_layer_set_size (me_change_layer, (GSize) { 0 , 0  } );
+  text_layer_set_size (you_change_layer, (GSize) { 0 , 0  } );
+}
 
-  draw_direction();
+static void show_history_layers()
+{
+  text_layer_set_size (history_player_1, (GSize) { 72 , 36  } );
+  text_layer_set_size (history_player_2, (GSize) { 72 , 36  } );
+}
+
+static void hide_history_layers()
+{
+  text_layer_set_size (history_player_1, (GSize) { 0 , 0  } );
+  text_layer_set_size (history_player_2, (GSize) { 0 , 0  } );
+}
+
+static void show_confirm_layers()
+{
+  text_layer_set_size (confirm_accept_layer, (GSize) { 72 , 28 } );
+  text_layer_set_size (confirm_reject_layer, (GSize) { 72 , 28 } );
+}
+
+static void hide_confirm_layers()
+{
+  text_layer_set_size (confirm_accept_layer, (GSize) { 0 , 0  } );
+  text_layer_set_size (confirm_reject_layer, (GSize) { 0 , 0  } );
+}
+
+static void show_reset_prompt()
+{
+  hide_change_layers();
+  hide_history_layers();
+  show_confirm_layers();
+  
+  text_layer_set_text(direction_layer, "Reset?");
+  
+  reset_prompt = true;
+  round_prompt = false;
+}
+
+static void show_round_prompt()
+{
+  hide_change_layers();
+  hide_history_layers();
+  show_confirm_layers();
+
+  text_layer_set_text(direction_layer, "Round?");
+  
   reset_prompt = false;
+  round_prompt = true;
+}
+
+static void hide_prompt()
+{
+  hide_confirm_layers();
+  show_change_layers();
+  show_history_layers();
+  
+  reset_prompt = false;
+  round_prompt = false;
+  
+  draw_direction();
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  change_direction();
+  if (reset_prompt == false && round_prompt == false) {
+    change_direction();
+  }
 }
 
 static void select_click_long_handler(ClickRecognizerRef recognizer, void *context){
@@ -209,8 +277,11 @@ static void select_click_long_handler(ClickRecognizerRef recognizer, void *conte
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (reset_prompt == true){
     reset_life_totals();
-    hide_reset_prompt();
-  }else{
+    show_round_prompt();
+  } else if(round_prompt == true){
+    set_round_start_time();
+    hide_prompt();
+  } else {
     player_life_1 = change_life_total(player_life_1, 1);
     player_life_1_change = change_life_total_history(player_life_1_change, 1);
     draw_life_totals();
@@ -218,10 +289,13 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_long_handler(ClickRecognizerRef recognizer, void *context) {
-  if (reset_prompt == true){
+  if (reset_prompt == true) {
     reset_life_totals();
-    hide_reset_prompt();
-  }else{
+    show_round_prompt();
+  } else if (round_prompt == true) {
+    set_round_start_time();
+    hide_prompt();
+  } else {
     player_life_1 = change_life_total(player_life_1, 5);
     player_life_1_change = change_life_total_history(player_life_1_change, 5);
     draw_life_totals();
@@ -229,9 +303,11 @@ static void up_click_long_handler(ClickRecognizerRef recognizer, void *context) 
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  if (reset_prompt == true){
-    hide_reset_prompt();
-  }else{
+  if (reset_prompt == true) { 
+    show_round_prompt();
+  } else if (round_prompt == true) {
+    hide_prompt();
+  } else {
     player_life_2 = change_life_total(player_life_2, 1);
     player_life_2_change = change_life_total_history(player_life_2_change, 1);
     draw_life_totals();
@@ -239,9 +315,11 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void down_click_long_handler(ClickRecognizerRef recognizer, void *context) {
-  if (reset_prompt == true){
-    hide_reset_prompt();
-  }else{
+  if (reset_prompt == true) { 
+    show_round_prompt();
+  } else if (round_prompt == true) {
+    hide_prompt();
+  } else {
     player_life_2 = change_life_total(player_life_2, 5);
     player_life_2_change = change_life_total_history(player_life_2_change, 5);
     draw_life_totals();
@@ -264,75 +342,83 @@ static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  life_total_1 = text_layer_create((GRect) { .origin = { 0, 11 }, .size = { bounds.size.w / 2, (bounds.size.h / 2) - 11 } });
+  life_total_1 = text_layer_create((GRect) { .origin = { 0, 11 + 18 }, .size = { bounds.size.w / 2, (bounds.size.h / 2) - 11 } });
   text_layer_set_text_alignment(life_total_1, GTextAlignmentCenter);
   text_layer_set_font(life_total_1, fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49));
   layer_add_child(window_layer, text_layer_get_layer(life_total_1));
 
-  life_total_2 = text_layer_create((GRect) { .origin = { 0, (bounds.size.h / 2) + 18 }, .size = { bounds.size.w / 2, (bounds.size.h / 2) - 18 } });
+  life_total_2 = text_layer_create((GRect) { .origin = { 0, (bounds.size.h / 2) + 18 + 2}, .size = { bounds.size.w / 2, (bounds.size.h / 2) - 18 } });
   text_layer_set_text_alignment(life_total_2, GTextAlignmentCenter);
   text_layer_set_font(life_total_2, fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49));
   layer_add_child(window_layer, text_layer_get_layer(life_total_2));
 
-  direction_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, (bounds.size.h / 2) - 20 }, .size = { bounds.size.w / 2 , 60 } });
-  text_layer_set_font(direction_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
+  direction_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, (bounds.size.h / 2) - 18 }, .size = { bounds.size.w / 2 , 60 } });
+  text_layer_set_font(direction_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(direction_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(direction_layer));
 
-  confirm_accept_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, 0}, .size = { bounds.size.w / 2 , 28 } });
+  confirm_accept_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, 12}, .size = { bounds.size.w / 2 , 28 } });
   text_layer_set_text(confirm_accept_layer, "Yes");
   text_layer_set_font(confirm_accept_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_alignment(confirm_accept_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(confirm_accept_layer));
 
-  confirm_reject_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, (bounds.size.h / 2) + ((bounds.size.h / 2) / 2) }, .size = { bounds.size.w / 2 , 28 } });
+  confirm_reject_layer = text_layer_create((GRect) { .origin = { bounds.size.w / 2, bounds.size.h - 28 - 8 }, .size = { bounds.size.w / 2 , 28 } });
   text_layer_set_text(confirm_reject_layer, "No");
   text_layer_set_text_alignment(confirm_reject_layer, GTextAlignmentRight);
   text_layer_set_font(confirm_reject_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(confirm_reject_layer));
 
-  me_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { (bounds.size.w / 2), 18 } });
+  me_layer = text_layer_create((GRect) { .origin = { 0, 16 }, .size = { (bounds.size.w / 2), 18 } });
   text_layer_set_text(me_layer, "ME");
   text_layer_set_text_alignment(me_layer, GTextAlignmentCenter);
   text_layer_set_font(me_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(me_layer));
 
-  me_change_layer = text_layer_create((GRect) { .origin = { (bounds.size.h / 2), 0}, .size = { (bounds.size.w / 2), 18 } });
+  me_change_layer = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), 16}, .size = { (bounds.size.w / 2), 18 } });
   text_layer_set_text(me_change_layer, "CHANGE");
   text_layer_set_text_alignment(me_change_layer, GTextAlignmentCenter);
   text_layer_set_font(me_change_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(me_change_layer));
 
-  you_layer = text_layer_create((GRect) { .origin = { 0, (bounds.size.h / 2) + 7}, .size = { (bounds.size.w / 2), 18 } });
+  you_layer = text_layer_create((GRect) { .origin = { 0, (bounds.size.h / 2) + 9}, .size = { (bounds.size.w / 2), 18 } });
   text_layer_set_text(you_layer, "YOU");
   text_layer_set_text_alignment(you_layer, GTextAlignmentCenter);
   text_layer_set_font(you_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(you_layer));
 
-  you_change_layer = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), (bounds.size.h / 2) + 7}, .size = { (bounds.size.w / 2), 18 } });
+  you_change_layer = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), (bounds.size.h / 2) + 9}, .size = { (bounds.size.w / 2), 18 } });
   text_layer_set_text(you_change_layer, "CHANGE");
   text_layer_set_text_alignment(you_change_layer, GTextAlignmentCenter);
   text_layer_set_font(you_change_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(you_change_layer));
 
-  history_player_1 = text_layer_create((GRect) { .origin = { (bounds.size.h / 2), 18}, .size = { (bounds.size.w / 2), 36 } });
+  history_player_1 = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), 18 + 16}, .size = { (bounds.size.w / 2), 36 } });
   text_layer_set_text(history_player_1, "");
   text_layer_set_text_alignment(history_player_1, GTextAlignmentCenter);
   text_layer_set_overflow_mode(history_player_1, GTextOverflowModeWordWrap);
   text_layer_set_font(history_player_1, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(history_player_1));
 
-  history_player_2 = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), (bounds.size.h / 2) + 25}, .size = { (bounds.size.w / 2), 36 } });
+  history_player_2 = text_layer_create((GRect) { .origin = { (bounds.size.w / 2), (bounds.size.h / 2) + 25 + 2}, .size = { (bounds.size.w / 2), 36 } });
   text_layer_set_text(history_player_2, "");
   text_layer_set_text_alignment(history_player_2, GTextAlignmentCenter);
   text_layer_set_overflow_mode(history_player_2, GTextOverflowModeWordWrap);
   text_layer_set_font(history_player_2, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(history_player_2));
-
-  history_layer = inverter_layer_create((GRect) { .origin = { bounds.size.w / 2, 0 }, .size = { bounds.size.w / 2, bounds.size.h } });
+  
+  round_time_layer = text_layer_create((GRect) { .origin = { 0, 0 }, .size = { bounds.size.w, 16 } });
+  text_layer_set_text(round_time_layer, "ROUND ");
+  text_layer_set_text_alignment(round_time_layer, GTextAlignmentCenter);
+  text_layer_set_font(round_time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
+  layer_add_child(window_layer, text_layer_get_layer(round_time_layer));
+  
+  history_layer = inverter_layer_create((GRect) { .origin = { bounds.size.w / 2, 16 }, .size = { bounds.size.w / 2, bounds.size.h } });
   layer_add_child(window_layer, inverter_layer_get_layer(history_layer));
 
-  hide_reset_prompt();
+  draw_round_time();
+  tick_timer_service_subscribe(SECOND_UNIT, &draw_round_time_callback);
+  hide_prompt();
   draw_life_totals();
   draw_direction();
   draw_history();
@@ -351,6 +437,7 @@ static void window_unload(Window *window) {
   inverter_layer_destroy(history_layer);
   text_layer_destroy(history_player_1);
   text_layer_destroy(history_player_2);
+  text_layer_destroy(round_time_layer);
 }
 
 static void init(void) {
@@ -364,7 +451,8 @@ static void init(void) {
   player_life_1 = persist_exists(PLAYER_LIFE_1_PKEY)  ? persist_read_int(PLAYER_LIFE_1_PKEY)  : PLAYER_LIFE_1_DEFAULT;
   player_life_2 = persist_exists(PLAYER_LIFE_2_PKEY)  ? persist_read_int(PLAYER_LIFE_2_PKEY)  : PLAYER_LIFE_2_DEFAULT;
   direction     = persist_exists(DIRECTION_PKEY)      ? persist_read_int(DIRECTION_PKEY)      : DIRECTION_DEFAULT;
-
+  round_start_time = persist_exists(ROUND_START_TIME_PKEY)      ? persist_read_int(ROUND_START_TIME_PKEY) :  set_round_start_time();
+  
   persist_read_string(HISTORY_1_PLAYER_1_PKEY, history_1_player_1, 18);
   persist_read_string(HISTORY_2_PLAYER_1_PKEY, history_2_player_1, 18);
   persist_read_string(HISTORY_1_PLAYER_2_PKEY, history_1_player_2, 18);
@@ -378,6 +466,7 @@ static void deinit(void) {
   persist_write_int(PLAYER_LIFE_1_PKEY, player_life_1);
   persist_write_int(PLAYER_LIFE_2_PKEY, player_life_2);
   persist_write_int(DIRECTION_PKEY, direction);
+  persist_write_int(ROUND_START_TIME_PKEY, round_start_time);
   persist_write_string(HISTORY_1_PLAYER_1_PKEY, history_1_player_1);
   persist_write_string(HISTORY_2_PLAYER_1_PKEY, history_2_player_1);
   persist_write_string(HISTORY_1_PLAYER_2_PKEY, history_1_player_2);
