@@ -1,6 +1,6 @@
 Pebble MTG Life Counter
 ===================
-A Magic: The Gathering life counter and round timer for the Pebble smart watch. Tracks two players life totals, provides a history fore each player, and a roud timer.
+A Magic: The Gathering life counter and round timer for the Pebble smart watch. Tracks two players life totals, the last two life total changes, and round time.
 
 ![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/usage.png) 
 How to Use
