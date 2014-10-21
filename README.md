@@ -1,6 +1,6 @@
 Pebble MTG Life Counter
 ===================
-A Magic:The Gathering life counter for the Pebble smart watch (SDK 2.0 BETA6). Tracks two players life totals and provides the last two life total changes for each player.
+A Magic:The Gathering life counter and round timer for the Pebble smart watch. Tracks two players life totals, provides a history fore each player, and a roud timer.
 
 ![alt tag](https://raw.github.com/crankeye/pebble-mtg-life-counter/master/screenshots/usage.png) 
 How to Use
@@ -11,18 +11,21 @@ How to Use
 
 **Select**: Toggle +/-
 
-**Select Long**: Reset
+**Select Long**: Reset Life Counter / Reset Round Timer
 
 **Down**: You +/- 1
 
 **Down Long**: You +/- 5
 
-How to Build
-------------
-1. Follow the [Getting Started Guide](https://developer.getpebble.com/2/getting-started/). I've successfully compiled this app with the SDK 2.0 BETA3 AND SDK 2.0 BETA6 versions.
-2. Follow the standard build and install commands
-`$ cd /path/to/pebble-mtg-life-counter/
-$ pebble build && pebble install --phone XXX.XXX.XXX.XXX`
+Change Log
+----------
+### v1.1
+- Added round timer.
+- Increased history update delay to 2 seconds
+- Fixed bug when pressing select during the reset prompt.
+ 
+### v1.0
+- Released
 
 Donate
 ------
